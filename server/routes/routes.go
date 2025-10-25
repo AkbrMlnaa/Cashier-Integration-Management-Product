@@ -11,9 +11,7 @@ func SetupRoutes(app *fiber.App) {
 	// Group utama untuk semua endpoint API
 	api := app.Group("/api")
 
-	
-	api.Post("/register", controllers.Register)
-	api.Post("/login", controllers.Login)
+	AuthRoutes(api)
 
 	protected := api.Group("/v1", middleware.JWTProtected())
 	protected.Post("/transactions", controllers.CreateTransaction)

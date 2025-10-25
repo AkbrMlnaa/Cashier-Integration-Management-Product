@@ -18,6 +18,6 @@ func main() {
 
 	routes.SetupRoutes(app)
 
-	fmt.Println("Server running on http://localhost:8080")
-	log.Fatal(app.Listen(":8081"))
+	fmt.Println("Server running on http://localhost:3030")
+	log.Fatal(app.Listen(":3030"))
 }
