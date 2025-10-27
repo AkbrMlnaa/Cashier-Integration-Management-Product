@@ -90,10 +90,6 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
-	fmt.Println("DEBUG - Email:", req.Email)
-	fmt.Println("DEBUG - Input Password:", req.Password)
-	fmt.Println("DEBUG - Hash from DB:", user.Password)
-
 	// Bandingkan password input (plain) dengan hash dari DB
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		fmt.Println("Compare error:", err)

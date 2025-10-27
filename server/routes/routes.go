@@ -8,13 +8,20 @@ import (
 )
 
 func SetupRoutes(app *fiber.App) {
-	// Group utama untuk semua endpoint API
+	
 	api := app.Group("/api")
 
 	AuthRoutes(api)
 
 	protected := api.Group("/v1", middleware.JWTProtected())
-	protected.Post("/transactions", controllers.CreateTransaction)
-	protected.Get("/products", controllers.GetAllProducts)
 
+	protected.Post("/transactions", controllers.CreateTransaction)
+	
+
+	protected.Post("/ingredients", controllers.AddIngredient)          
+	protected.Get("/ingredients", controllers.GetAllIngredients)          
+	protected.Get("/ingredients/:id", controllers.GetIngredientByID)      
+	protected.Delete("/ingredients/:id", controllers.DeleteIngredient)     
+	protected.Put("/ingredients/:id", controllers.UpdateIngredient)
+	protected.Put("/ingredients/:id/stock", controllers.UpdateIngredientStock)
 }

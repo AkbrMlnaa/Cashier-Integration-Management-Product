@@ -15,7 +15,7 @@ func ConnectDB() {
 	config.LoadEnv()
 
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s client_encoding=UTF8",
 		config.GetEnv("DB_HOST"),
 		config.GetEnv("DB_USER"),
 		config.GetEnv("DB_PASSWORD"),

@@ -1,9 +1,12 @@
 package database
 
-import "server/models"
+import (
+	"log"
+	"server/models"
+)
 
 func Migrate() {
-	DB.AutoMigrate(
+	err := DB.AutoMigrate(
 		&models.User{},
 		&models.Product{},
 		&models.Ingredient{},
@@ -12,4 +15,9 @@ func Migrate() {
 		&models.Transaction{},
 		&models.TransactionDetail{},
 	)
+	if err != nil {
+		log.Fatalf("Gagal migrate: %v", err)
+	}
+
+	log.Println("Migrasi database berhasil")
 }

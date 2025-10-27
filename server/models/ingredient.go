@@ -8,6 +8,8 @@ type Ingredient struct {
 	Unit      string    `gorm:"size:50;not null" json:"unit"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 
-	Stock       *IngredientStock       `gorm:"foreignKey:IngredientID" json:"stock"`
-	ProductRefs []ProductIngredient   `gorm:"foreignKey:IngredientID" json:"product_refs,omitempty"`
+	
+	Stock IngredientStock `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"stock,omitempty"`
+
+	ProductRefs []ProductIngredient `gorm:"foreignKey:IngredientID" json:"product_refs,omitempty"`
 }
