@@ -9,7 +9,7 @@ type Ingredient struct {
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 
 	
-	Stock IngredientStock `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"stock,omitempty"`
+	Stock IngredientStock `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 
 	ProductRefs []ProductIngredient `gorm:"foreignKey:IngredientID" json:"product_refs,omitempty"`
 }

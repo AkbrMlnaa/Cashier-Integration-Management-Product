@@ -6,6 +6,6 @@ type ProductIngredient struct {
 	IngredientID uint      `json:"ingredient_id"`
 	Quantity     float64   `gorm:"type:numeric(12,2);not null;check:quantity>0" json:"quantity"`
 
-	Product     Product     `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+	Product     Product     `gorm:"foreignKey:ProductID" json:"-"`
 	Ingredient  Ingredient  `gorm:"foreignKey:IngredientID" json:"ingredient,omitempty"`
 }
