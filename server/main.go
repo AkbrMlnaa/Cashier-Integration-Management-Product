@@ -7,6 +7,7 @@ import (
 	"server/routes"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func main() {
@@ -16,6 +17,12 @@ func main() {
 
 	app := fiber.New()
 
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:5173",
+		AllowMethods: "GET,POST,PUT,DELETE",
+		AllowHeaders: "Content-type, Authorization",
+		AllowCredentials: true,
+	}))
 	routes.SetupRoutes(app)
 
 	fmt.Println("Server running on http://localhost:3030")

@@ -9,11 +9,9 @@ import (
 
 func SetupRoutes(app *fiber.App) {
 
-	api := app.Group("/api")
+	AuthRoutes(app)
 
-	AuthRoutes(api)
-
-	protected := api.Group("/v1", middleware.JWTProtected())
+	protected := app.Group("/v1", middleware.JWTProtected())
 	
 	// Transaction routes
 	protected.Post("/transactions", controllers.CreateTransaction)

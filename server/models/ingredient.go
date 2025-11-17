@@ -6,6 +6,7 @@ type Ingredient struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	Name      string    `gorm:"size:150;not null" json:"name"`
 	Unit      string    `gorm:"size:50;not null" json:"unit"`
+	Image	  string 	`gorm:"size:255" json:"image"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 
 	
