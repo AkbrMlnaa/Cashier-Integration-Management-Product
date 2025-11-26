@@ -16,7 +16,7 @@ type JWTClaim struct {
 }
 
 
-func GenerateJWT(userID uint, email, role string) (string, error) {
+func GenerateJWT(userID uint, email, role string, duration time.Duration) (string, error) {
 	secret := []byte(config.GetEnv("JWT_SECRET"))
 
 	claims := JWTClaim{
@@ -24,7 +24,7 @@ func GenerateJWT(userID uint, email, role string) (string, error) {
 		Email:  email,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), 
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
@@ -32,7 +32,6 @@ func GenerateJWT(userID uint, email, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secret)
 }
-
 
 func VerifyToken(tokenString string) (*JWTClaim, error) {
 	secret := []byte(config.GetEnv("JWT_SECRET"))

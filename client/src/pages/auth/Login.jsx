@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 import {
@@ -13,31 +13,42 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { loginUser } from "@/services/auth";
 import { useNavigate } from "react-router-dom";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
-export const Login = () => {
+export const Login = ({auth, setAuth}) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
+  useEffect(() => {
+    if (auth?.authenticated) {
+      navigate("/dashboard");
+    }
+  }, [auth.authenticated, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
 
     const res = await loginUser(formData.email, formData.password);
 
     setIsLoading(false);
 
-    if (!res.token) {
-      alert(res.message || "Login gagal");
+    if (res.error) {
+      setErrorMessage(res.message || "Login gagal");
       return;
     }
 
-    localStorage.setItem("token", res.token);
-    navigate("/dashboard");
+    if (!res.error) {
+      setAuth({ authenticated: true, profile: res.data });
+      
+    }
   };
 
   const handleChange = (field, value) => {
@@ -72,17 +83,17 @@ export const Login = () => {
         </CardHeader>
 
         <CardContent>
+          <ErrorMessage message={errorMessage} />
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Email
-                </Label>
-              </div>
+              <Label
+                htmlFor="email"
+                className="text-sm font-medium text-gray-700"
+              >
+                Email
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -99,14 +110,12 @@ export const Login = () => {
 
             {/* Password */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label
-                  htmlFor="password"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Kata Sandi
-                </Label>
-              </div>
+              <Label
+                htmlFor="password"
+                className="text-sm font-medium text-gray-700"
+              >
+                Kata Sandi
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -152,32 +161,6 @@ export const Login = () => {
           </form>
         </CardContent>
       </Card>
-
-      <style>{`
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
 };

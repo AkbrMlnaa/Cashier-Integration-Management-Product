@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"strings"
 	"server/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,22 +8,13 @@ import (
 
 func JWTProtected() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
+		tokenString := c.Cookies("access_token")
+		if tokenString == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "token tidak ditemukan",
 			})
 		}
 
-		// Format header: Bearer <token>
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "format token tidak valid",
-			})
-		}
-
-		// Verifikasi token
 		claims, err := utils.VerifyToken(tokenString)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -32,7 +22,6 @@ func JWTProtected() fiber.Handler {
 			})
 		}
 
-		// Simpan data user ke context Fiber
 		c.Locals("user_id", claims.UserID)
 		c.Locals("email", claims.Email)
 		c.Locals("role", claims.Role)
@@ -40,3 +29,27 @@ func JWTProtected() fiber.Handler {
 		return c.Next()
 	}
 }
+
+
+func RBAC(allowedRoles ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		role := c.Locals("role")
+
+		if role == nil {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "role tidak ditemukan dalam token",
+			})
+		}
+
+		for _, r := range allowedRoles {
+			if r == role {
+				return c.Next()
+			}
+		}
+
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "akses ditolak, role tidak memiliki izin",
+		})
+	}
+}
+
