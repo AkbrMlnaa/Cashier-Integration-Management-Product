@@ -1,22 +1,44 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Login } from "./pages/auth/login";
 import Dashboard from "./pages/Dashboard";
 import { PrivateRoute, PublicRoute } from "./pages/auth/AuthRoute";
-import { api } from "./services/api";
+import { api } from "@/services/api";
 
 function App() {
-  const [auth, setAuth] = useState({ authenticated: false, profile: null });
+  const [auth, setAuth] = useState({
+    authenticated: false,
+    profile: null,
+    loading: true,
+  });
 
   useEffect(() => {
-    api.get("/v1/profile")
-      .then(res => setAuth({ authenticated: true, profile: res.data }))
-      .catch(() => setAuth({ authenticated: false, profile: null }));
+    const loadUser = async () => {
+      try {
+        const res = await api.get("/v1/profile");
+
+        setAuth({
+          authenticated: true,
+          profile: res.data,
+          loading: false,
+        });
+      } catch {
+        setAuth({
+          authenticated: false,
+          profile: null,
+          loading: false,
+        });
+      }
+    };
+
+    loadUser();
   }, []);
+
 
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
+
       <Route
         path="/login"
         element={
@@ -25,11 +47,12 @@ function App() {
           </PublicRoute>
         }
       />
+
       <Route
         path="/dashboard"
         element={
           <PrivateRoute auth={auth}>
-            <Dashboard setAuth={setAuth} />
+            <Dashboard setAuth={setAuth} auth={auth}/>
           </PrivateRoute>
         }
       />

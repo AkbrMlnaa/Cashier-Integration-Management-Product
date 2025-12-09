@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Edit2, Trash2, Search } from "lucide-react";
+import { confirmAlert, errorAlert, successAlert } from "@/services/alert";
 
 export default function IngredientsContent({
   ingredients = [],
@@ -15,12 +16,33 @@ export default function IngredientsContent({
   const [formData, setFormData] = useState({
     name: "",
     unit: "",
-    quantity: 0, 
+    quantity: 0,
   });
 
   const filteredIngredients = ingredients.filter((item) =>
     (item?.name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const stockThreshold = {
+    kg: { low: 3, medium: 7 },
+    gram: { low: 500, medium: 2500 },
+    ml: { low: 500, medium: 2000 },
+    liter: { low: 2, medium: 10 },
+    pcs: { low: 10, medium: 50 },
+    pack: { low: 5, medium: 20 },
+    box: { low: 3, medium: 7 },
+  };
+  const getStockStatus = (quantity, unit) => {
+    if (!unit) return "unknown";
+
+    const threshold = stockThreshold[unit.toLowerCase()];
+
+    if (!threshold) return "unknown";
+
+    if (quantity === 0) return "kosong"
+    if (quantity <= threshold.low) return "rendah";
+    if (quantity <= threshold.medium) return "sedang";
+    return "tinggi";
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -31,7 +53,7 @@ export default function IngredientsContent({
       case "rendah":
         return "bg-rose-100 text-rose-800";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-200 text-gray-800";
     }
   };
 
@@ -44,7 +66,7 @@ export default function IngredientsContent({
       case "rendah":
         return "Stok Rendah";
       default:
-        return "Tidak Diketahui";
+        return "Stok Kosong";
     }
   };
 
@@ -73,9 +95,13 @@ export default function IngredientsContent({
     setEditingId(null);
   };
 
-  
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.name || !formData.unit) {
+      errorAlert("Gagal", "Nama dan satuan wajib diisi");
+      return;
+    }
 
     if (editingId) {
       onUpdateIngredient(editingId, {
@@ -83,26 +109,44 @@ export default function IngredientsContent({
         unit: formData.unit,
       });
 
-     
       onUpdateIngredientStock(editingId, formData.quantity);
+
+      await successAlert("Berhasil", "Ingredient berhasil diperbarui");
     } else {
       onAddIngredient({
         name: formData.name,
         unit: formData.unit,
       });
+
+      await successAlert("Berhasil", "Ingredient berhasil ditambahkan");
     }
 
     closeModal();
+  };
+
+  const handleDelete = async (id) => {
+    const result = await confirmAlert(
+      "Hapus Ingredient?",
+      "Data yang dihapus tidak bisa dikembalikan"
+    );
+
+    if (result.isConfirmed) {
+      onDeleteIngredient(id);
+      successAlert("Terhapus", "Ingredient berhasil dihapus");
+    }
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={20}
+          />
           <input
             type="text"
-            placeholder="Cari bahan..."
+            placeholder="Cari Ingredient..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg"
@@ -111,10 +155,15 @@ export default function IngredientsContent({
 
         <button
           onClick={() => openModal()}
-          className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg flex gap-2"
+          className="px-4 py-2.5 
+bg-gradient-to-r from-red-600 to-rose-600 
+hover:from-red-700 hover:to-rose-700
+text-white rounded-lg font-semibold 
+flex items-center justify-center sm:justify-start
+gap-2 whitespace-nowrap"
         >
           <Plus size={20} />
-          Tambah Bahan
+          Tambah Ingredient
         </button>
       </div>
 
@@ -122,7 +171,7 @@ export default function IngredientsContent({
       <div className="bg-white rounded-lg shadow border overflow-hidden">
         <div className="bg-gradient-to-r from-red-50 to-rose-50 px-6 py-4 border-b">
           <h2 className="text-lg font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
-            Daftar Bahan Baku
+            Daftar Ingredient
           </h2>
         </div>
 
@@ -130,11 +179,21 @@ export default function IngredientsContent({
           <table className="w-full min-w-max">
             <thead>
               <tr className="bg-gray-50 border-b">
-                <th className="px-6 py-3 text-left text-sm font-semibold">Bahan</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Jumlah</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Satuan</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Aksi</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">
+                  Ingredient
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">
+                  Jumlah
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">
+                  Satuan
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold">
+                  Aksi
+                </th>
               </tr>
             </thead>
 
@@ -142,23 +201,38 @@ export default function IngredientsContent({
               {filteredIngredients.map((item) => (
                 <tr key={item.id} className="hover:bg-rose-50">
                   <td className="px-6 py-3">{item.name}</td>
-                  <td className="px-6 py-3 font-semibold">{item.stock?.quantity ?? 0}</td>
+                  <td className="px-6 py-3 font-semibold">
+                    {item.stock?.quantity ?? 0}
+                  </td>
                   <td className="px-6 py-3">{item.unit}</td>
                   <td className="px-6 py-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(item.status)}`}>
-                      {getStatusBadgeText(item.status)}
-                    </span>
+                    {(() => {
+                      const quantity = item.stock?.quantity ?? 0;
+                      const unit = item.unit;
+
+                      const computedStatus = getStockStatus(quantity, unit);
+
+                      return (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                            computedStatus
+                          )}`}
+                        >
+                          {getStatusBadgeText(computedStatus)}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-3 flex gap-2">
                     <button
                       onClick={() => openModal(item)}
-                      className="px-3 py-1.5 bg-rose-100 text-rose-700 rounded"
+                      className="px-3 py-1.5 bg-yellow-200 text-amber-700 rounded hover:bg-amber-300 transition"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button
-                      onClick={() => onDeleteIngredient(item.id)}
-                      className="px-3 py-1.5 bg-red-100 text-red-700 rounded"
+                      onClick={() => handleDelete(item.id)}
+                      className="px-3 py-1.5 bg-red-200 text-red-700 rounded hover:bg-red-300"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -166,7 +240,6 @@ export default function IngredientsContent({
                 </tr>
               ))}
             </tbody>
-
           </table>
         </div>
       </div>
@@ -176,17 +249,21 @@ export default function IngredientsContent({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full space-y-4">
             <h2 className="text-xl font-bold">
-              {editingId ? "Edit Bahan" : "Tambah Bahan"}
+              {editingId ? "Edit Ingredient" : "Tambah Ingredient"}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Nama */}
               <div>
-                <label className="block text-sm mb-1 font-semibold">Nama Bahan</label>
+                <label className="block text-sm mb-1 font-semibold">
+                  Nama Ingredient
+                </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   required
                   className="w-full px-3 py-2 border rounded-lg"
                 />
@@ -194,10 +271,14 @@ export default function IngredientsContent({
 
               {/* Satuan */}
               <div>
-                <label className="block text-sm mb-1 font-semibold">Satuan</label>
+                <label className="block text-sm mb-1 font-semibold">
+                  Satuan
+                </label>
                 <select
                   value={formData.unit}
-                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, unit: e.target.value })
+                  }
                   required
                   className="w-full px-3 py-2 border rounded-lg"
                 >
@@ -215,12 +296,17 @@ export default function IngredientsContent({
               {/* Stok (hanya saat edit) */}
               {editingId && (
                 <div>
-                  <label className="block text-sm mb-1 font-semibold">Stok</label>
+                  <label className="block text-sm mb-1 font-semibold">
+                    Stok
+                  </label>
                   <input
                     type="number"
                     value={formData.quantity}
                     onChange={(e) =>
-                      setFormData({ ...formData, quantity: Number(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        quantity: Number(e.target.value),
+                      })
                     }
                     className="w-full px-3 py-2 border rounded-lg"
                   />
@@ -247,7 +333,6 @@ export default function IngredientsContent({
           </div>
         </div>
       )}
-
     </div>
   );
 }

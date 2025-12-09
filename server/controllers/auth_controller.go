@@ -12,26 +12,32 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Register(c *fiber.Ctx) error {
-	var req models.User
+type RegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Role     string `json:"role,omitempty"` 
+}
 
+func Register(c *fiber.Ctx) error {
+	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "input tidak valid"})
 	}
 
-	// Validasi wajib
+	req.Name = strings.TrimSpace(req.Name)
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
 	if req.Name == "" || req.Email == "" || req.Password == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "name, email, dan password wajib diisi"})
 	}
 
-	
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	if !strings.Contains(req.Email, "@") {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "format email tidak valid"})
 	}
 
 	var existing models.User
-	if err := database.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
+	if err := database.DB.Where("LOWER(email) = ?", req.Email).First(&existing).Error; err == nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "email sudah terdaftar"})
 	}
 
@@ -39,14 +45,24 @@ func Register(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "gagal mengenkripsi password"})
 	}
-	req.Password = string(hash)
 
-	// Default role
-	if req.Role == "" {
-		req.Role = "cashier"
+	user := models.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: string(hash),
+		Role:     req.Role,
 	}
 
-	if err := database.DB.Create(&req).Error; err != nil {
+	// validasi role sesuai check constraint
+	role := strings.ToLower(user.Role)
+	switch role {
+	case "manager", "cashier":
+		user.Role = role
+	default:
+		user.Role = "cashier"
+	}
+
+	if err := database.DB.Create(&user).Error; err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -54,12 +70,15 @@ func Register(c *fiber.Ctx) error {
 		"status":  "success",
 		"message": "registrasi berhasil",
 		"data": fiber.Map{
-			"name":  req.Name,
-			"email": req.Email,
-			"role":  req.Role,
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
 		},
 	})
 }
+
+
 
 
 func Login(c *fiber.Ctx) error {
@@ -100,9 +119,9 @@ func Login(c *fiber.Ctx) error {
 		Value:    accessToken,
 		HTTPOnly: true,
 		Secure:   false, // ubah ke true saat production
-		SameSite: "Lax",
+		SameSite: "None",
 		Path:     "/",
-		Expires:  time.Now().Add(15 * time.Minute),
+		Expires:  time.Now().Add(35 * time.Minute),
 	})
 
 
@@ -110,8 +129,8 @@ func Login(c *fiber.Ctx) error {
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		HTTPOnly: true,
-		Secure:   false, // ubah ke true saat production
-		SameSite: "Lax",
+		Secure:   false, 
+		SameSite: "None",
 		Path:     "/",
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 	})
@@ -122,6 +141,50 @@ func Login(c *fiber.Ctx) error {
 	})
 }
 
+func RefreshToken(c *fiber.Ctx) error {
+    refreshToken := c.Cookies("refresh_token")
+    if refreshToken == "" {
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+            "error": "refresh token tidak ditemukan",
+        })
+    }
+
+    claims, err := utils.VerifyToken(refreshToken)
+    if err != nil {
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+            "error": "refresh token tidak valid atau kadaluarsa",
+        })
+    }
+
+    newAccessToken, err := utils.GenerateJWT(
+        claims.UserID,
+        claims.Email,
+        claims.Role,
+        15*time.Minute,
+    )
+
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "gagal membuat access token baru",
+        })
+    }
+
+    c.Cookie(&fiber.Cookie{
+        Name:     "access_token",
+        Value:    newAccessToken,
+        HTTPOnly: true,
+        Secure:   false,
+        SameSite: "None",
+        Path:     "/",
+        Expires:  time.Now().Add(15 * time.Minute),
+    })
+
+    return c.JSON(fiber.Map{
+        "status":  "success",
+        "message": "access token berhasil diperbarui",
+    })
+}
+
 
 func Logout(c *fiber.Ctx) error {
     c.Cookie(&fiber.Cookie{
@@ -130,7 +193,7 @@ func Logout(c *fiber.Ctx) error {
         Expires:  time.Now().Add(-time.Hour),
         HTTPOnly: true,
         Secure:   false,
-        SameSite: "Lax",
+        SameSite: "None",
         Path:     "/",
     })
 
@@ -140,7 +203,7 @@ func Logout(c *fiber.Ctx) error {
         Expires:  time.Now().Add(-time.Hour),
         HTTPOnly: true,
         Secure:   false,
-        SameSite: "Lax",
+        SameSite: "None",
         Path:     "/",
     })
 

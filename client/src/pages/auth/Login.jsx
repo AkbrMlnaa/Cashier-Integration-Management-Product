@@ -15,7 +15,7 @@ import { loginUser } from "@/services/auth";
 import { useNavigate } from "react-router-dom";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
-export const Login = ({auth, setAuth}) => {
+export const Login = ({ auth, setAuth }) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -46,8 +46,8 @@ export const Login = ({auth, setAuth}) => {
     }
 
     if (!res.error) {
-      setAuth({ authenticated: true, profile: res.data });
-      
+      setAuth({ authenticated: true, profile: res.profile });
+      navigate("/dashboard");
     }
   };
 

@@ -1,15 +1,10 @@
+import { confirmAlertLogout, errorAlert, successAlert } from "@/services/alert";
 import { api } from "@/services/api";
 import {
-  X,
-  Utensils,
-  Package,
-  History,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  LogOut,
+  X, Utensils, Package, History, ChevronLeft, ChevronRight,
+  TrendingUp, LogOut
 } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function Sidebar({
   onSelect,
@@ -17,23 +12,44 @@ export default function Sidebar({
   setCollapsed,
   open,
   setOpen,
-  setAuth
+  setAuth,
+  auth, // <-- kita ambil role disini
 }) {
   const navigate = useNavigate();
+  const role = auth?.profile?.role; 
 
   const menuItems = [
     { name: "Menu", key: "menu", icon: <Utensils size={20} /> },
     { name: "Ingredients", key: "ingredients", icon: <Package size={20} /> },
-    { name: "Riwayat Transaksi", key: "riwayat", icon: <History size={20} /> },
-    { name: "Penjualan", key: "penjualan", icon: <TrendingUp size={20} /> },
+
+    // HANYA MANAGER
+    ...(role === "manager"
+      ? [
+          { name: "Riwayat Transaksi", key: "riwayat", icon: <History size={20} /> },
+          { name: "Penjualan", key: "penjualan", icon: <TrendingUp size={20} /> },
+        ]
+      : []),
   ];
 
- const handleLogout = async () => {
-  await api.post("/auth/logout");
-  setAuth({ authenticated: false, profile: null }); 
-  navigate("/login");
-};
+  const handleLogout = async () => {
+    try {
+      const { isConfirmed } = await confirmAlertLogout(
+        "Logout?",
+        "Anda yakin ingin keluar dari aplikasi?"
+      );
+      if (!isConfirmed) return;
 
+      await api.post("/auth/logout");
+      setAuth({ authenticated: false, profile: null });
+
+      await successAlert("Berhasil logout", "Sampai jumpa kembali 👋");
+      navigate("/login");
+
+    } catch (error) {
+      console.error(error);
+      errorAlert("Gagal logout", "Terjadi kesalahan pada server");
+    }
+  };
 
   return (
     <>
@@ -47,8 +63,7 @@ export default function Sidebar({
       <aside
         className={`fixed md:static top-0 left-0 h-screen bg-white border-r shadow-xl p-4 z-50 transition-all duration-300 flex flex-col
         ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-        ${collapsed ? "md:w-[80px]" : "md:w-[260px]"} w-72 overflow-hidden
-      `}
+        ${collapsed ? "md:w-[80px]" : "md:w-[260px]"} w-72 overflow-hidden`}
       >
         {/* Close Button — MOBILE */}
         <div className="flex md:hidden justify-end mb-4">
@@ -72,17 +87,19 @@ export default function Sidebar({
           <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-rose-600 rounded-xl flex items-center justify-center shadow-lg">
             <span className="text-white font-bold text-lg">BS</span>
           </div>
+
           {!collapsed && (
             <h2 className="hidden md:block text-xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
               Bintang Sanga'
             </h2>
           )}
+
           <h2 className="md:hidden text-xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
-              Bintang Sanga'
+            Bintang Sanga'
           </h2>
         </div>
 
-        {/* Menu */}
+        {/* MENU LIST */}
         <nav className="space-y-2 flex-1">
           {menuItems.map((item) => (
             <button
@@ -92,15 +109,16 @@ export default function Sidebar({
                 setOpen(false);
               }}
               className={`flex items-center gap-3 w-full p-3 rounded-xl hover:bg-rose-100 hover:text-red-600 transition
-                ${collapsed ? "justify-center" : "justify-start"}
-              `}
+                ${collapsed ? "justify-center" : "justify-start"}`}
             >
               <span className="text-red-600">{item.icon}</span>
+
               {!collapsed && (
                 <span className="hidden md:block font-medium text-gray-700">
                   {item.name}
                 </span>
               )}
+
               <span className="font-medium text-gray-700 md:hidden">
                 {item.name}
               </span>
@@ -108,11 +126,11 @@ export default function Sidebar({
           ))}
         </nav>
 
+        {/* LOGOUT */}
         <button
           onClick={handleLogout}
           className={`flex items-center gap-3 w-full p-3 rounded-xl hover:bg-red-100 hover:text-red-600 transition text-red-600 font-medium border-t pt-4 mt-4
-            ${collapsed ? "justify-center" : "justify-start"}
-          `}
+            ${collapsed ? "justify-center" : "justify-start"}`}
         >
           <LogOut size={20} />
           {!collapsed && <span className="hidden md:block">Logout</span>}

@@ -15,11 +15,19 @@ func SetupRoutes(app *fiber.App) {
 
 	// Profile routes
 	protected.Get("/profile",
-		middleware.RBAC("manager","cashier"),
+		middleware.RBAC("manager", "cashier"),
 		controllers.GetProfile)
 
 	// Transaction routes
-	protected.Post("/transactions", controllers.CreateTransaction)
+	protected.Post("/transactions",
+		middleware.RBAC("manager", "cashier"),
+		controllers.AddTransaction)
+	protected.Get("/transactions",
+		middleware.RBAC("manager", "cashier"),
+		controllers.GetAllTransactions)
+	protected.Get("/transactions/:id",
+		middleware.RBAC("manager", "cashier"),
+		controllers.GetTransactionByID)
 
 	// Ingredient routes
 	protected.Post("/ingredients",
@@ -43,12 +51,24 @@ func SetupRoutes(app *fiber.App) {
 		controllers.UpdateIngredientStock)
 
 	// Product routes
-	protected.Post("/products", controllers.AddProduct)
-	protected.Get("/products", controllers.GetAllProducts)
-	protected.Get("/products/:id", controllers.GetProductByID)
-	protected.Put("/products/:id", controllers.UpdateProduct)
-	protected.Delete("/products/:id", controllers.DeleteProduct)
+	protected.Post("/products",
+		middleware.RBAC("manager", "cashier"),
+		controllers.AddProduct)
+	protected.Get("/products",
+		middleware.RBAC("manager", "cashier"),
+		controllers.GetAllProducts)
+	protected.Get("/products/:id",
+		middleware.RBAC("manager", "cashier"),
+		controllers.GetProductByID)
+	protected.Put("/products/:id",
+		middleware.RBAC("manager", "cashier"),
+		controllers.UpdateProduct)
+	protected.Delete("/products/:id",
+		middleware.RBAC("manager", "cashier"),
+		controllers.DeleteProduct)
 
-	protected.Put("/products/:id/ingredients", controllers.UpsertProductIngredients)
+	protected.Put("/products/:id/ingredients",
+		middleware.RBAC("manager", "cashier"),
+		controllers.UpsertProductIngredients)
 
 }

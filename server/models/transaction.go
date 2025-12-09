@@ -10,7 +10,7 @@ const (
 )
 
 type Transaction struct {
-	ID            uint           `gorm:"primaryKey" json:"id"`
+	ID            uint           `gorm:"primaryKey;autoIncrement" json:"id,omitempty"`
 	UserID        *uint          `json:"user_id"`
 	Total         float64        `gorm:"type:numeric(12,2);not null;check:total>=0" json:"total"`
 	PaymentMethod PaymentMethod  `gorm:"type:varchar(10);not null" json:"payment_method"`

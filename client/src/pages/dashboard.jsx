@@ -1,64 +1,94 @@
-// Dashboard.jsx
 import { useEffect, useState } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import MenuContent from "./menu";
 import SalesContent from "./penjualan";
 import RiwayatTransaksiContent from "./riwayat-transaksi";
 import IngredientsContent from "./ingredients";
-import { addIngredient, deleteIngredient, getAllIngredients, updateIngredient, updateIngredientStock } from "@/services/ingredients";
+import {
+  addIngredient,
+  deleteIngredient,
+  getAllIngredients,
+  updateIngredient,
+  updateIngredientStock,
+} from "@/services/ingredients";
+import { addProduct, deleteProduct, getAllProducts } from "@/services/product";
+import { errorAlert, successAlert } from "@/services/alert";
+import { addTransaction, getAllTransactions } from "@/services/transaction";
 
-export default function Dashboard({ setAuth }) {
+export default function Dashboard({ setAuth, auth }) {
   const [collapsed, setCollapsed] = useState(false);
   const [activeMenu, setActiveMenu] = useState("menu");
 
-  // State utama
-  const [menuItems, setMenuItems] = useState([
-    {
-      id: 1,
-      name: "Nasi Goreng",
-      price: 20000,
-      image: "/assets/nasi-goreng.jpg",
-      description: "Nasi goreng dengan telur, ayam, dan sayuran segar.",
-    },
-    {
-      id: 2,
-      name: "Mie Ayam",
-      price: 15000,
-      image: "/assets/mie-ayam.jpg",
-      description: "Mie ayam dengan pangsit dan kuah kaldu khas.",
-    },
-    {
-      id: 3,
-      name: "Es Teh Manis",
-      price: 5000,
-      image: "/placeholder.svg",
-      description: "Minuman segar dengan teh pilihan dan gula alami.",
-    },
-    {
-      id: 4,
-      name: "Ayam Goreng Crispy",
-      price: 25000,
-      image: "/placeholder.svg",
-      description: "Ayam goreng renyah dengan bumbu rahasia.",
-    },
-  ]);
+  const [menuItems, setMenuItems] = useState([]);
+
+  useEffect(() => {
+    if (activeMenu === "menu") {
+      fetchProducts();
+    }
+  }, [activeMenu]);
+
+  const fetchProducts = async () => {
+    try {
+      const data = await getAllProducts();
+      setMenuItems(data);
+    } catch (error) {
+      console.error("Gagal fetch product", error);
+    }
+  };
+
   const [cart, setCart] = useState([]);
   const [transactions, setTransactions] = useState([]);
 
-  // CRUD Menu
-  const addMenu = (item) => {
-    const newItem = { ...item, id: Date.now() };
-    setMenuItems((prev) => [...prev, newItem]);
+  
+
+  const fetchTransactions = async () => {
+    try {
+      const data = await getAllTransactions();
+      setTransactions(data || []);
+    } catch (error) {
+      console.error("Gagal fetch transactions", error);
+    }
+  };
+  useEffect(() => {
+    if (activeMenu === "riwayat" || activeMenu === "penjualan") {
+      fetchTransactions();
+    }
+  }, [activeMenu]);
+
+  const addMenu = async (item) => {
+    try {
+      const newMenu = await addProduct(item); // backend return full object
+      setMenuItems((prev) => [...prev, newMenu]);
+      successAlert("Berhasil", "Product berhasil ditambahkan");
+    } catch (error) {
+      console.error("Gagal tambah product", error);
+      errorAlert("Gagal", "Product Gagal ditambahkan");
+    }
   };
 
-  const updateMenu = (id, updatedItem) => {
-    setMenuItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updatedItem } : item))
-    );
+  const updateMenu = async (id, updatedItem) => {
+    try {
+      setMenuItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, ...updatedItem } : item
+        )
+      );
+      successAlert("Berhasil", "Product berhasil diupdate");
+    } catch (error) {
+      console.error("Gagal update produk", error);
+      errorAlert("Gagal", "Product gagal diupdate");
+    }
   };
 
-  const deleteMenu = (id) => {
-    setMenuItems((prev) => prev.filter((item) => item.id !== id));
+  const deleteMenu = async (id) => {
+    try {
+      await deleteProduct(id);
+      setMenuItems((prev) => prev.filter((item) => item.id !== id));
+      successAlert("Berhasil", "product berhasil dihapus");
+    } catch (error) {
+      console.error("Gagal hapus produk", error);
+      errorAlert("Gagal", "product gagal dihapus");
+    }
   };
 
   // Cart
@@ -97,89 +127,98 @@ export default function Dashboard({ setAuth }) {
     setCart([]);
   };
 
-  const checkout = () => {
+  const checkout = async () => {
     if (cart.length === 0) return;
+
     const total = cart.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
-    const transaction = {
-      id: Date.now(),
-      date: new Date().toLocaleString("id-ID"),
-      items: cart,
+
+    const payload = {
+      payment_method: "cash",
       total,
+      details: cart.map((item) => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.price * item.quantity, 
+      })),
     };
-    setTransactions((prev) => [transaction, ...prev]);
-    setCart([]);
+
+    try {
+      await addTransaction(payload);
+
+      // Refresh data transaksi
+      await fetchTransactions();
+
+      // Kosongkan cart
+      setCart([]);
+
+      successAlert("Berhasil", "Transaksi berhasil");
+    } catch (error) {
+      console.error(error);
+      errorAlert("Gagal", "Transaksi gagal");
+    }
   };
 
-  const [ingredients,setIngredients] = useState([])
+  const [ingredients, setIngredients] = useState([]);
 
-  useEffect(() =>{
+  useEffect(() => {
     if (activeMenu === "ingredients") {
-      fetchIngredients()
+      fetchIngredients();
     }
-  },[activeMenu])
+  }, [activeMenu]);
 
   const fetchIngredients = async () => {
     try {
-      const data = await getAllIngredients()
-    setIngredients(data)
+      const data = await getAllIngredients();
+      setIngredients(data);
     } catch (error) {
-      console.error("Gagal fetch ingredients", error)
+      console.error("Gagal fetch ingredients", error);
     }
-  }
+  };
 
-   const handleAddIngredient = async (item) => {
-  try {
-    const res = await addIngredient(item);
-    setIngredients(prev => [...prev, res]); 
-  } catch (error) {
-    console.error("Gagal tambah ingredient", error);
-  }
-};
-
+  const handleAddIngredient = async (item) => {
+    try {
+      const res = await addIngredient(item);
+      setIngredients((prev) => [...prev, res]);
+    } catch (error) {
+      console.error("Gagal tambah ingredient", error);
+    }
+  };
 
   const handleUpdateIngredient = async (id, item) => {
-  try {
-    const res = await updateIngredient(id, item);
-    setIngredients(prev =>
-      prev.map(ing => ing.id === id ? res : ing)
-    );
-  } catch (error) {
-    console.error("Gagal update ingredient", error);
-  }
-};
-
+    try {
+      const res = await updateIngredient(id, item);
+      setIngredients((prev) => prev.map((ing) => (ing.id === id ? res : ing)));
+    } catch (error) {
+      console.error("Gagal update ingredient", error);
+    }
+  };
 
   const handleDeleteIngredient = async (id) => {
     try {
       await deleteIngredient(id);
-      setIngredients(prev => prev.filter(ing => ing.id !== id));
+      setIngredients((prev) => prev.filter((ing) => ing.id !== id));
     } catch (error) {
       console.error("Gagal hapus ingredient", error);
     }
   };
 
- const handleUpdateStock = async (id, quantity) => {
-  try {
-    const updatedStock = await updateIngredientStock(id, quantity);
+  const handleUpdateStock = async (id, quantity) => {
+    try {
+      const updatedStock = await updateIngredientStock(id, quantity);
 
-    setIngredients(prev =>
-      prev.map(item =>
-        item.id === id
-          ? { ...item, stock: updatedStock }
-          : item
-      )
-    );
-  } catch (error) {
-    console.error("Gagal update stock", error);
-  }
-};
-
-
-
-  
+      setIngredients((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, stock: updatedStock } : item
+        )
+      );
+    } catch (error) {
+      console.error("Gagal update stock", error);
+    }
+  };
 
   // Render konten
   const renderContent = () => {
@@ -195,13 +234,15 @@ export default function Dashboard({ setAuth }) {
           />
         );
       case "ingredients":
-        return <IngredientsContent 
-        ingredients={ingredients}
-        onAddIngredient={handleAddIngredient}
-        onUpdateIngredient={handleUpdateIngredient}
-        onUpdateIngredientStock={handleUpdateStock}
-        onDeleteIngredient={handleDeleteIngredient}
-        />;
+        return (
+          <IngredientsContent
+            ingredients={ingredients}
+            onAddIngredient={handleAddIngredient}
+            onUpdateIngredient={handleUpdateIngredient}
+            onUpdateIngredientStock={handleUpdateStock}
+            onDeleteIngredient={handleDeleteIngredient}
+          />
+        );
       case "penjualan":
         return <SalesContent transactions={transactions} />;
       case "riwayat":
@@ -220,6 +261,7 @@ export default function Dashboard({ setAuth }) {
         open={false}
         setOpen={() => {}}
         setAuth={setAuth}
+        auth={auth}
       />
 
       <main className="flex-1 overflow-auto">
@@ -230,7 +272,9 @@ export default function Dashboard({ setAuth }) {
       {cart.length > 0 && (
         <div className="fixed bottom-0 right-0 left-0 md:static border-t bg-card p-4 md:min-w-80">
           <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Cart ({cart.length})</h3>
+            <h3 className="font-semibold text-lg">
+              Item yang dipesan ({cart.length})
+            </h3>
 
             {/* Tabel Cart */}
             <div className="overflow-x-auto">
@@ -244,8 +288,8 @@ export default function Dashboard({ setAuth }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {cart.map((item) => (
-                    <tr key={item.id} className="border-b">
+                  {cart.map((item, index) => (
+                     <tr key={`${item.id}-${index}`} className="border-b">
                       <td className="p-2">{item.name}</td>
                       <td className="p-2 text-center flex items-center justify-center gap-1">
                         <button
