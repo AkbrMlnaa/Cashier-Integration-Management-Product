@@ -11,3 +11,7 @@ type TransactionDetail struct {
 	Product        *Product      `gorm:"foreignKey:ProductID" json:"product,omitempty"`
 	Transaction    *Transaction  `gorm:"foreignKey:TransactionID" json:"transaction,omitempty"`
 }
+
+func (TransactionDetail) TableName() string {
+    return "public.transaction_details"
+}

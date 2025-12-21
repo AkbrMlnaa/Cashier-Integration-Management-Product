@@ -19,3 +19,7 @@ type Transaction struct {
 	User     *User               `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Details  []TransactionDetail `gorm:"foreignKey:TransactionID" json:"details,omitempty"`
 }
+
+func (Transaction) TableName() string {
+    return "public.transactions"
+}

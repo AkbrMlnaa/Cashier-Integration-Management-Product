@@ -19,3 +19,6 @@ type Product struct {
 	Details     []TransactionDetail `gorm:"foreignKey:ProductID" json:"details,omitempty"`
 }
 
+func (Product) TableName() string {
+    return "public.products"
+}

@@ -9,3 +9,7 @@ type ProductIngredient struct {
 	Product     Product     `gorm:"foreignKey:ProductID" json:"-"`
 	Ingredient  Ingredient  `gorm:"foreignKey:IngredientID" json:"ingredient,omitempty"`
 }
+
+func (ProductIngredient) TableName() string {
+    return "public.product_ingredients"
+}

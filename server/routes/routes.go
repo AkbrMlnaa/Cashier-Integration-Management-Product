@@ -23,10 +23,10 @@ func SetupRoutes(app *fiber.App) {
 		middleware.RBAC("manager", "cashier"),
 		controllers.AddTransaction)
 	protected.Get("/transactions",
-		middleware.RBAC("manager", "cashier"),
+		middleware.RBAC("manager"),
 		controllers.GetAllTransactions)
 	protected.Get("/transactions/:id",
-		middleware.RBAC("manager", "cashier"),
+		middleware.RBAC("manager"),
 		controllers.GetTransactionByID)
 
 	// Ingredient routes

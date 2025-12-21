@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, Edit2, Trash2, Search } from "lucide-react";
-import { confirmAlert, errorAlert, successAlert } from "@/services/alert";
+import { confirmAlert, errorAlert } from "@/services/alert";
 
 export default function IngredientsContent({
   ingredients = [],
@@ -38,7 +38,7 @@ export default function IngredientsContent({
 
     if (!threshold) return "unknown";
 
-    if (quantity === 0) return "kosong"
+    if (quantity === 0) return "kosong";
     if (quantity <= threshold.low) return "rendah";
     if (quantity <= threshold.medium) return "sedang";
     return "tinggi";
@@ -110,15 +110,11 @@ export default function IngredientsContent({
       });
 
       onUpdateIngredientStock(editingId, formData.quantity);
-
-      await successAlert("Berhasil", "Ingredient berhasil diperbarui");
     } else {
       onAddIngredient({
         name: formData.name,
         unit: formData.unit,
       });
-
-      await successAlert("Berhasil", "Ingredient berhasil ditambahkan");
     }
 
     closeModal();
@@ -132,12 +128,21 @@ export default function IngredientsContent({
 
     if (result.isConfirmed) {
       onDeleteIngredient(id);
-      successAlert("Terhapus", "Ingredient berhasil dihapus");
     }
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+            Kelola Bahan-bahan
+          </h1>
+          <p className="text-gray-600 text-xs sm:text-sm mt-1">
+            Atur Bahan-bahan yang akan digunakan
+          </p>
+        </div>
+      </div>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
         <div className="flex-1 relative">
           <Search
@@ -246,90 +251,127 @@ gap-2 whitespace-nowrap"
 
       {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full space-y-4">
-            <h2 className="text-xl font-bold">
-              {editingId ? "Edit Ingredient" : "Tambah Ingredient"}
-            </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+            onClick={closeModal}
+          ></div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Nama */}
-              <div>
-                <label className="block text-sm mb-1 font-semibold">
-                  Nama Ingredient
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-
-              {/* Satuan */}
-              <div>
-                <label className="block text-sm mb-1 font-semibold">
-                  Satuan
-                </label>
-                <select
-                  value={formData.unit}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unit: e.target.value })
-                  }
-                  required
-                  className="w-full px-3 py-2 border rounded-lg"
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white z-10 shrink-0">
+              <h2 className="text-lg font-bold text-gray-900">
+                {editingId ? "Edit Ingredient" : "Tambah Ingredient"}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <option value="">Pilih satuan...</option>
-                  <option value="kg">Kilogram (kg)</option>
-                  <option value="gram">Gram (g)</option>
-                  <option value="ml">Mililiter (ml)</option>
-                  <option value="liter">Liter (L)</option>
-                  <option value="pcs">Pcs</option>
-                  <option value="pack">Pack</option>
-                  <option value="box">Box</option>
-                </select>
-              </div>
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 18 18" />
+                </svg>
+              </button>
+            </div>
 
-              {/* Stok (hanya saat edit) */}
-              {editingId && (
+            {/* Body */}
+            <div className="p-6 overflow-y-auto">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Nama Ingredient */}
                 <div>
-                  <label className="block text-sm mb-1 font-semibold">
-                    Stok
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Nama Ingredient
                   </label>
                   <input
-                    type="number"
-                    value={formData.quantity}
+                    type="text"
+                    value={formData.name}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        quantity: Number(e.target.value),
-                      })
+                      setFormData({ ...formData, name: e.target.value })
                     }
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all text-sm"
+                    placeholder="Contoh: Tepung Terigu"
+                    required
                   />
                 </div>
-              )}
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 bg-gray-200 rounded-lg flex-1"
-                >
-                  Batal
-                </button>
+                {/* Satuan */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Satuan Unit
+                  </label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) =>
+                      setFormData({ ...formData, unit: e.target.value })
+                    }
+                    required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all text-sm appearance-none"
+                  >
+                    <option value="">Pilih satuan...</option>
+                    <option value="kg">Kilogram (kg)</option>
+                    <option value="gram">Gram (g)</option>
+                    <option value="ml">Mililiter (ml)</option>
+                    <option value="liter">Liter (L)</option>
+                    <option value="pcs">Pcs</option>
+                    <option value="pack">Pack</option>
+                    <option value="box">Box</option>
+                  </select>
+                </div>
 
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg flex-1"
-                >
-                  {editingId ? "Update" : "Tambah"}
-                </button>
-              </div>
-            </form>
+                {/* Stok (Hanya Muncul Saat Edit) - Tema Rose/Merah */}
+                {editingId && (
+                  <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                    <label className="block text-xs font-bold text-rose-800 uppercase tracking-wider mb-1.5">
+                      Update Stok
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={formData.quantity}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            quantity: Number(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2.5 bg-white border border-rose-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-rose-900 font-bold text-sm"
+                      />
+                      <span className="absolute right-4 top-2.5 text-xs font-medium text-rose-500">
+                        {formData.unit}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer Buttons */}
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-sm font-medium transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    // Menggunakan Gradient Red-Rose
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:opacity-90 text-sm font-bold shadow-lg shadow-rose-500/20 active:scale-95 transition-all"
+                  >
+                    {editingId ? "Simpan Perubahan" : "Tambah Ingredient"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

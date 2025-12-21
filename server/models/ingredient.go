@@ -12,3 +12,7 @@ type Ingredient struct {
 
 	ProductRefs []ProductIngredient `gorm:"foreignKey:IngredientID" json:"product_refs,omitempty"`
 }
+
+func (Ingredient) TableName() string {
+    return "public.ingredients"
+}

@@ -10,3 +10,7 @@ type IngredientStock struct {
 
 	Ingredient *Ingredient `gorm:"foreignKey:IngredientID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 }
+
+func (IngredientStock) TableName() string {
+    return "public.ingredient_stocks"
+}

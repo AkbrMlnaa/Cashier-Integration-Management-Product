@@ -1,8 +1,14 @@
 import { confirmAlertLogout, errorAlert, successAlert } from "@/services/alert";
 import { api } from "@/services/api";
 import {
-  X, Utensils, Package, History, ChevronLeft, ChevronRight,
-  TrendingUp, LogOut
+  X,
+  Utensils,
+  Package,
+  History,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -16,7 +22,7 @@ export default function Sidebar({
   auth, // <-- kita ambil role disini
 }) {
   const navigate = useNavigate();
-  const role = auth?.profile?.role; 
+  const role = auth?.profile?.role;
 
   const menuItems = [
     { name: "Menu", key: "menu", icon: <Utensils size={20} /> },
@@ -25,8 +31,16 @@ export default function Sidebar({
     // HANYA MANAGER
     ...(role === "manager"
       ? [
-          { name: "Riwayat Transaksi", key: "riwayat", icon: <History size={20} /> },
-          { name: "Penjualan", key: "penjualan", icon: <TrendingUp size={20} /> },
+          {
+            name: "Riwayat Transaksi",
+            key: "riwayat",
+            icon: <History size={20} />,
+          },
+          {
+            name: "Penjualan",
+            key: "penjualan",
+            icon: <TrendingUp size={20} />,
+          },
         ]
       : []),
   ];
@@ -42,9 +56,8 @@ export default function Sidebar({
       await api.post("/auth/logout");
       setAuth({ authenticated: false, profile: null });
 
-      await successAlert("Berhasil logout", "Sampai jumpa kembali 👋");
+      await successAlert("Logout", "Berhasil");
       navigate("/login");
-
     } catch (error) {
       console.error(error);
       errorAlert("Gagal logout", "Terjadi kesalahan pada server");
@@ -61,9 +74,11 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed md:static top-0 left-0 h-screen bg-white border-r shadow-xl p-4 z-50 transition-all duration-300 flex flex-col
-        ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-        ${collapsed ? "md:w-[80px]" : "md:w-[260px]"} w-72 overflow-hidden`}
+        className={`fixed md:static top-0 bottom-0 md:top-5 md:bottom-5 left-0 bg-white border-r shadow-xl p-4 z-50 
+  transition-all duration-300 ease-in-out flex flex-col  
+  ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+  ${collapsed ? "md:w-[80px]" : "md:w-[260px]"} w-72 overflow-hidden
+  rounded-r-xl md:rounded-xl`}
       >
         {/* Close Button — MOBILE */}
         <div className="flex md:hidden justify-end mb-4">

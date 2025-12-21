@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 import { ShoppingCart, Plus, Edit2, Trash2, Search } from "lucide-react";
 import { getAllIngredients } from "@/services/ingredients";
-import {
-  addProduct,
-  updateProduct,
-  upsertProductIngredients,
-} from "@/services/product";
-import { errorAlert, successAlert } from "@/services/alert";
+import { updateProduct, upsertProductIngredients } from "@/services/product";
+import { errorAlert } from "@/services/alert";
 
 export default function Menu({
   // eslint-disable-next-line no-unused-vars
@@ -47,7 +43,7 @@ export default function Menu({
     fetchIngredients();
   }, []);
 
-  const categories = ["Minuman", "Makanan", "Snack", "Dessert", "Topping"];
+  const categories = ["Minuman", "Makanan"];
 
   const filteredItems = menuItems.filter((item) => {
     const name = item?.name?.toLowerCase() || "";
@@ -65,10 +61,12 @@ export default function Menu({
         category: item.category,
         price: item.price,
         image: null,
-        ingredients: item.ingredients?.map((i) => ({
-          ingredient_id: i.ingredient.id,
-          quantity: i.quantity,
-        })) || [{ ingredient_id: "", quantity: "" }],
+        ingredients: item.ingredients
+          ?.filter((i) => i?.ingredient_id || i?.ingredient?.id)
+          .map((i) => ({
+            ingredient_id: i.ingredient_id ?? i.ingredient?.id ?? "",
+            quantity: i.quantity ?? "",
+          })) || [{ ingredient_id: "", quantity: "" }],
       });
     } else {
       setEditingId(null);
@@ -114,24 +112,37 @@ export default function Menu({
         image: formData.image,
       };
 
+      if (ingredientsPayload.length === 0) {
+        errorAlert(
+          "Gagal",
+          "Resep wajib diisi. Mohon tambahkan minimal satu bahan baku."
+        );
+        return;
+      }
+
       if (editingId) {
-        const updatedMenu = await updateProduct(editingId, payload);
+        const updatedProductResponse = await updateProduct(editingId, payload);
+
+        const updatedProductData =
+          updatedProductResponse.data || updatedProductResponse;
+
         await upsertProductIngredients(editingId, ingredientsPayload);
+
         onUpdateMenu(editingId, {
-          ...updatedMenu,
-          ingredients: ingredientsPayload,
+          ...updatedProductData,
+          ingredients: updatedProductData.ingredients, // ambil dari backend
         });
       } else {
-        const newMenu = await addProduct(payload); 
-        await upsertProductIngredients(newMenu.id, ingredientsPayload);
-        onAddMenu({ ...newMenu, ingredients: ingredientsPayload });
-        successAlert("Berhasil", "Product berhasil ditambahkan");
+        onAddMenu({ product: payload, ingredients: ingredientsPayload });
       }
 
       closeModal();
     } catch (err) {
       console.error(err);
-      errorAlert("Gagal", "Product gagal ditambahkan");
+      errorAlert(
+        "Gagal",
+        editingId ? "Product gagal diupdate" : "Product gagal ditambahkan"
+      );
     }
   };
 
@@ -192,69 +203,60 @@ gap-2 whitespace-nowrap"
       </div>
 
       {/* Menu Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
         {filteredItems.map((item) => (
           <div
             key={item.id}
-            className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100"
+            className="relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
+            onClick={() => addToCart(item)}
           >
-            <div
-              className="relative w-full h-40 sm:h-48 overflow-hidden bg-gray-200 cursor-pointer"
-              onClick={() => addToCart(item)}
-            >
-              <img
-                src={
-                  item.image_url && item.image_url !== ""
-                    ? item.image_url
-                    : "https://via.placeholder.com/300x200?text=No+Image"
-                }
-                alt={item.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+            {/* Image */}
+            <div className="relative w-full h-32 sm:h-36 overflow-hidden">
+              {item.image_url && (
+                <img
+                  src={item.image_url}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                />
+              )}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              {/* Price Badge */}
+              <div className="absolute top-2 right-2 bg-rose-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold shadow-sm">
+                Rp {(Number(item.price) || 0).toLocaleString("id-ID")}
+              </div>
             </div>
 
-            <div className="p-3 sm:p-4">
-              <div className="flex items-start justify-between mb-2 gap-2">
-                <h3 className="font-bold text-base sm:text-lg text-gray-900 line-clamp-2">
-                  {item.name}
-                </h3>
-                <span>
-                  Rp {(Number(item.price) || 0).toLocaleString("id-ID")}
-                </span>
-              </div>
-              <div className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
-                <p>Kategori: {item.category}</p>
-              </div>
+            {/* Content */}
+            <div className="p-2 sm:p-3 flex flex-col gap-1">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 line-clamp-2">
+                {item.name}
+              </h3>
+              <span className="text-gray-500 text-xs sm:text-sm">
+                {item.category}
+              </span>
 
-              <div className="flex flex-col sm:flex-row gap-2">
+              {/* Edit & Delete buttons */}
+              <div className="flex gap-1 mt-1 justify-end">
                 <button
-                  onClick={() => addToCart(item)}
-                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 
-bg-gradient-to-r from-emerald-700 to-green-800 
-hover:from-emerald-800 hover:to-green-900 
-text-white rounded-lg font-semibold 
-flex items-center justify-center gap-2 
-shadow-md hover:shadow-xl active:scale-95 
-text-sm sm:text-base"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openModal(item);
+                  }}
+                  className="p-1 bg-yellow-200 text-amber-700 rounded-full hover:bg-yellow-300 transition-colors"
                 >
-                  <ShoppingCart size={18} />Tambah
+                  <Edit2 size={14} />
                 </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openModal(item)}
-                    className="px-2 sm:px-3 py-2 sm:py-2.5 bg-yellow-200 text-amber-700 rounded-lg hover:bg-yellow-300"
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button
-                    onClick={() => onDeleteMenu(item.id)}
-                    className="px-2 sm:px-3 py-2 sm:py-2.5 bg-red-200 text-red-700 rounded-lg hover:bg-red-300"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteMenu(item.id);
+                  }}
+                  className="p-1 bg-red-200 text-red-700 rounded-full hover:bg-red-300 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
           </div>
@@ -263,153 +265,249 @@ text-sm sm:text-base"
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg sm:text-xl font-bold mb-4">
-              {editingId ? "Edit Menu" : "Tambah Menu"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Nama Menu
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Harga
-                </label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
-                  placeholder="0"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Kategori
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
-                  required
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+            onClick={closeModal}
+          ></div>
+
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white z-10 shrink-0">
+              <h2 className="text-lg font-bold text-gray-900">
+                {editingId ? "Edit Menu" : "Tambah Menu Baru"}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <option value="">-- Pilih Kategori --</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 18 18" />
+                </svg>
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Gambar
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setFormData({ ...formData, image: e.target.files[0] })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
-                  placeholder="/image.jpg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Ingredients
-                </label>
+            <div className="overflow-y-auto p-6 custom-scrollbar">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                    Informasi Produk
+                  </h3>
 
-                {formData.ingredients.map((item, index) => (
-                  <div key={index} className="flex gap-2 mb-2 items-center">
-                    <select
-                      value={item.ingredient_id}
-                      onChange={(e) =>
-                        handleIngredientChange(
-                          index,
-                          "ingredient_id",
-                          e.target.value
-                        )
-                      }
-                      className="flex-1 px-2 py-2 border rounded-lg text-sm"
-                    >
-                      <option value="">Pilih Ingredient</option>
-                      {ingredientslist.map((ing) => (
-                        <option key={ing.id} value={ing.id}>
-                          {ing.name} ({ing.stock?.quantity || 0} {ing.unit})
-                        </option>
-                      ))}
-                    </select>
-
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Nama Menu
+                    </label>
                     <input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.quantity}
+                      type="text"
+                      value={formData.name}
                       onChange={(e) =>
-                        handleIngredientChange(
-                          index,
-                          "quantity",
-                          e.target.value
-                        )
+                        setFormData({ ...formData, name: e.target.value })
                       }
-                      className="w-20 px-2 py-2 border rounded-lg text-sm"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all text-sm"
+                      placeholder="Contoh: Nasi Goreng Spesial"
+                      required
                     />
-
-                    {formData.ingredients.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeIngredient(index)}
-                        className="px-2 py-2 bg-red-500 text-white rounded"
-                      >
-                        ✕
-                      </button>
-                    )}
                   </div>
-                ))}
 
-                <button
-                  type="button"
-                  onClick={addIngredient}
-                  className="mt-2 px-3 py-1 bg-blue-500 text-white rounded-lg text-sm"
-                >
-                  + Tambah Ingredient
-                </button>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Harga (Rp)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-gray-400 text-sm">
+                          Rp
+                        </span>
+                        <input
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) =>
+                            setFormData({ ...formData, price: e.target.value })
+                          }
+                          className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all text-sm"
+                          placeholder="0"
+                          required
+                        />
+                      </div>
+                    </div>
 
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg flex-1"
-                >
-                  {editingId ? "Update" : "Tambah"}
-                </button>
-              </div>
-            </form>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Kategori
+                      </label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) =>
+                          setFormData({ ...formData, category: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all text-sm appearance-none"
+                        required
+                      >
+                        <option value="">Pilih Kategori</option>
+                        {categories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Gambar Produk
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setFormData({ ...formData, image: e.target.files[0] })
+                      }
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-rose-50 file:text-rose-600 hover:file:bg-rose-100 transition-all text-gray-500"
+                    />
+                  </div>
+                </div>
+
+                <hr className="border-gray-100" />
+
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Resep & Bahan Baku
+                    </h3>
+                    <span className="text-xs text-gray-400">
+                      {formData.ingredients.length} Item
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    {formData.ingredients.length === 0 && (
+                      <p className="text-center text-sm text-gray-400 py-2 italic">
+                        Belum ada bahan baku.
+                      </p>
+                    )}
+
+                    {formData.ingredients.map((item, index) => (
+                      <div key={index} className="flex gap-3 items-start group">
+                        <div className="flex-1">
+                          <select
+                            value={item.ingredient_id}
+                            onChange={(e) =>
+                              handleIngredientChange(
+                                index,
+                                "ingredient_id",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
+                          >
+                            <option value="">Pilih Bahan...</option>
+                            {ingredientslist.map((ing) => (
+                              <option key={ing.id} value={ing.id}>
+                                {ing.name} (Stok: {ing.stock?.quantity || 0}{" "}
+                                {ing.unit})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="w-24 relative">
+                          <input
+                            type="number"
+                            placeholder="Qty"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              handleIngredientChange(
+                                index,
+                                "quantity",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-center"
+                          />
+                        </div>
+
+                        {formData.ingredients.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => removeIngredient(index)}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Hapus Bahan"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              <line x1="10" x2="10" y1="11" y2="17" />
+                              <line x1="14" x2="14" y1="11" y2="17" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={addIngredient}
+                      className="w-full py-2.5 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg text-sm font-medium hover:border-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center justify-center gap-2 mt-2"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 12h14" />
+                        <path d="M12 5v14" />
+                      </svg>
+                      Tambah Bahan Baku
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-sm font-medium transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:opacity-90 text-sm font-bold shadow-lg shadow-rose-500/20 active:scale-95 transition-all"
+                  >
+                    {editingId ? "Simpan Perubahan" : "Simpan Menu"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
